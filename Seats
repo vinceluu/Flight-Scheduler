@@ -1,0 +1,66 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package flightscheduler.vvl5072.vincent.luu;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ *
+ * @author Vince
+ */
+public class Seats {
+    static int totalSeats;
+    private static Connection connection;
+    private static PreparedStatement FlightSeats;
+    final static String TOTAL_SEAT_QUERY = "SELECT NUMBEROFSEATS FROM JAVA.FLIGHT WHERE FlightNames = ?";
+    static int bookedSeats;
+    final static String BOOKED_SEAT_QUERY = "SELECT Count(flightname) From Java.booking WHERE flightname = ? AND date = ?";
+    
+    public static int getTotalSeats(String flightName){
+        //establish connection to flight to get seat information
+        connection = DatabaseConnection.databaseConnection();
+        
+        try {
+            FlightSeats = connection.prepareStatement(TOTAL_SEAT_QUERY);
+            FlightSeats.setString(1, flightName);
+            ResultSet resultSet = FlightSeats.executeQuery();
+            resultSet.next();
+            totalSeats = resultSet.getInt(1);
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(Seats.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        
+        return totalSeats;
+        
+    }
+    
+    public static int getBookedSeats(String flightName, Date date){
+        //establish connection to booking table to get booked seats
+        connection = DatabaseConnection.databaseConnection();
+        
+        try {
+            FlightSeats = connection.prepareStatement(BOOKED_SEAT_QUERY);
+            FlightSeats.setString(1, flightName);
+            FlightSeats.setDate(2, date);
+            ResultSet resultSet = FlightSeats.executeQuery();
+            resultSet.next();
+            bookedSeats = resultSet.getInt(1);
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(Seats.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        //return booked seats
+        return bookedSeats;
+        
+    }
+}
