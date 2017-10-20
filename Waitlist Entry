@@ -1,0 +1,89 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package flightscheduler.vvl5072.vincent.luu;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+
+/**
+ *
+ * @author Vince
+ */
+public class WaitlistEntry {
+
+    private static Connection connection = DatabaseConnection.databaseConnection();
+    private static PreparedStatement customerStatus = null;
+    private static ArrayList<String> waitlistCustomers = new ArrayList<String>();
+    final static String WAITLIST_QUERY = "INSERT into waitlistentry values(?,?,?,?)";
+    final static String CUSTOMER_QUERY = "SELECT customername FROM JAVA.waitlistentry WHERE flightname =? AND date = ? ORDER BY timestamp ASC";
+    final static String REMOVE_WL_QUERY = "DELETE from waitlistentry WHERE customername = ? AND date = ? ";
+
+    public static void addIntoWaitlist(String name, String flightName, Date date) {
+        Timestamp t;
+        try {
+            //establishing connection to waitlistentry table
+            customerStatus = connection.prepareStatement(WAITLIST_QUERY);
+            customerStatus.setString(1, flightName);
+            customerStatus.setDate(2, date);
+            customerStatus.setString(3, name);
+            //getting timestamp of customer waitlist entry
+            customerStatus.setTimestamp(4, new java.sql.Timestamp(new java.util.Date().getTime()));
+            customerStatus.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+    }
+
+    public static void getWaitlistedCustomers(String flightName, Date date) {
+        //shows the customers who are waitlisted in chronological order
+        connection = DatabaseConnection.databaseConnection();
+        try {
+            customerStatus = connection.prepareStatement(CUSTOMER_QUERY);
+            customerStatus.setString(1, flightName);
+            customerStatus.setDate(2, date);
+            ResultSet resultSet = customerStatus.executeQuery();
+            while (resultSet.next()) {
+                waitlistCustomers.add(resultSet.getString(1));
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+        //if array is empty then no customers on waitlist
+        if (waitlistCustomers.isEmpty()) {
+            FlightScheduler.displayStatus("     " + " No customers on waitlist \n");
+        }
+        //otherwise display the names of customers on waitlist
+        for (String s : waitlistCustomers) {
+            FlightScheduler.displayStatus("     " + s + "\n");
+        }
+        //clear array after printed
+        waitlistCustomers.clear();
+    }
+
+    public static int dropWaitlist(String name, Date date) {
+
+        try {
+
+            customerStatus = connection.prepareStatement(REMOVE_WL_QUERY);
+            customerStatus.setString(1, name);
+            customerStatus.setDate(2, date);
+            int deleteCount = customerStatus.executeUpdate();
+            return deleteCount;
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            return 0;
+
+        }
+
+    }
+}
