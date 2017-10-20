@@ -1,0 +1,189 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package flightscheduler.vvl5072.vincent.luu;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ *
+ * @author Vince
+ */
+public class Flight {
+
+    private static PreparedStatement flightNames;
+    private static Connection connection;
+    final static String FLIGHT_QUERY = "SELECT FlightNames FROM JAVA.FLIGHT";
+    private static PreparedStatement flightStatus;
+    private static ArrayList<String> bookedCustomers = new ArrayList<String>();
+    final static String BOOKED_QUERY = "SELECT customername FROM JAVA.BOOKING WHERE flightname = ? AND date = ?";
+    final static String ADD_FLIGHT = "INSERT into Flight values(?,?)";
+    final static String DELETE_FLIGHT_WL = "DELETE FROM JAVA.WAITLISTENTRY WHERE FLIGHTNAME = ? AND DATE = ?";
+    final static String DELETE_FLIGHT_FLIGHT = "DELETE FROM JAVA.FLIGHT WHERE FLIGHTNAMES = ?";
+    final static String NAME_DATE_BOOKING = "SELECT CUSTOMERNAME FROM JAVA.BOOKING WHERE FLIGHTNAME = ? AND DATE = ?";
+    final static String DELETE_FLIGHT_BOOKING = "DELETE FROM JAVA.BOOKING WHERE FLIGHTNAME = ? AND DATE = ?";
+    final static String NAME_WAITLIST = "SELECT CUSTOMERNAME FROM JAVA.WAITLISTENTRY WHERE FLIGHTNAME = ? AND DATE = ?";
+    private static PreparedStatement customersBooked;
+    private static PreparedStatement dropCustomersBooked;
+    private static PreparedStatement customersWaitlisted;
+    private static PreparedStatement dropCustomerWaitlist;
+    private static PreparedStatement dropPlane;
+            
+    public static ArrayList<String> getFlights() {
+
+        //establishing connection to flight table to get flightnames
+        ArrayList<String> flights = new ArrayList();
+        connection = DatabaseConnection.databaseConnection();
+
+        try {
+            flightNames = connection.prepareStatement(FLIGHT_QUERY);
+            ResultSet resultSet = flightNames.executeQuery();
+
+            while (resultSet.next()) {
+                flights.add(resultSet.getString(1));
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Dates.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return flights;
+
+    }
+
+    public static void getBookedPeople(String flightName, Date date) {
+        //establishing connection to booking to get entered customer names
+        connection = DatabaseConnection.databaseConnection();
+        try {
+            flightStatus = connection.prepareStatement(BOOKED_QUERY);
+            flightStatus.setString(1, flightName);
+            flightStatus.setDate(2, date);
+            ResultSet resultSet = flightStatus.executeQuery();
+            while (resultSet.next()) {
+                bookedCustomers.add(resultSet.getString(1));
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+        //if array is empty then no customers are booked
+        if (bookedCustomers.isEmpty()) {
+            FlightScheduler.displayStatus("     " + " No customers currently booked on " + flightName + ". \n");
+        }
+        //otherwise show customers currently booked
+        for (String s : bookedCustomers) {
+            FlightScheduler.displayStatus(s + "\n");
+        }
+        //clear the array of customers       
+        bookedCustomers.clear();
+    }
+
+    public static void addFlight(String flightName, int seats) {
+
+        try {
+            //insert into flight table
+            connection = DatabaseConnection.databaseConnection();
+            flightNames = connection.prepareStatement(ADD_FLIGHT);
+            flightNames.setString(1, flightName);
+            flightNames.setInt(2, seats);
+            flightNames.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+    }
+
+    
+ 
+    public static void dropFlight(String fn)
+    {
+        ArrayList<Date> dates = Dates.getDates();
+        ArrayList<String> names = new ArrayList<String>();
+        ArrayList<String> waitlistCustomers = new ArrayList<String>();
+        connection = DatabaseConnection.databaseConnection();
+        for(int i = 0; i < dates.size() - 1; i++) //iterates through all the dates
+        {
+            try
+            {
+                //delete flight from the flight table
+                dropPlane = connection.prepareStatement(DELETE_FLIGHT_FLIGHT);
+                dropPlane.setString(1, fn);
+                dropPlane.executeUpdate();
+                FlightScheduler.displayDrop(fn + " was cancelled.\n");
+                
+                //gets the customer names from booking for that flight on that day
+                customersBooked = connection.prepareStatement(NAME_DATE_BOOKING);
+                customersBooked.setString(1, fn);
+                customersBooked.setDate(2, dates.get(i));
+                ResultSet resultSet = customersBooked.executeQuery();
+                while(resultSet.next())
+                {
+                    names.add(resultSet.getString(1)); 
+                }
+                for(String s: names)
+                {
+                    rebookFlight(s, dates.get(i)); //sends a name and date to method which checks if eligible for rebooking
+                }
+                //customers on waitlist
+                customersWaitlisted = connection.prepareStatement(NAME_WAITLIST);
+                customersWaitlisted.setString(1, fn);
+                customersWaitlisted.setDate(2, dates.get(i));
+                ResultSet rt = customersWaitlisted.executeQuery();
+                while(rt.next())
+                {
+                    waitlistCustomers.add(rt.getString(1)); //list of customers on waitlist
+                }
+                for(String s: waitlistCustomers)
+                {
+                    FlightScheduler.displayDrop(s + " has been removed from the waitlist.\n");
+                }
+                
+                //Deleting all the entries
+                dropCustomerWaitlist = connection.prepareStatement(DELETE_FLIGHT_WL);
+                dropCustomerWaitlist.setString(1, fn);
+                dropCustomerWaitlist.setDate(2, dates.get(i));
+                dropCustomerWaitlist.executeUpdate();
+                
+                dropCustomersBooked = connection.prepareStatement(DELETE_FLIGHT_BOOKING);
+                dropCustomersBooked.setString(1, fn);
+                dropCustomersBooked.setDate(2, dates.get(i));
+                dropCustomersBooked.executeUpdate();
+                
+            }
+            catch (SQLException ex) 
+            {
+                ex.printStackTrace();
+            }
+        }
+    }
+    public static void rebookFlight(String name, Date date)
+    {
+        ArrayList<String> flights = getFlights();
+        boolean availableSeats = false;
+        for(int i = 0; i <= flights.size() - 1; i++)
+        {
+            if(Seats.getTotalSeats(flights.get(i)) > Seats.getBookedSeats(flights.get(i), date)) // if there are available seats on that plane rebook customer 
+            {
+                BookingEntry.addBookingEntry(name, flights.get(i), date);
+                FlightScheduler.displayDrop(name + " has been rebooked for flight " + flights.get(i) + " on " + date + "\n");
+               
+                //allow user to rebook
+                availableSeats= true;
+                break;
+            }
+        }
+        //otherwise do nothing, tell user they couldn't book
+        if(!availableSeats)
+        {
+                FlightScheduler.displayDrop(name + " could not be rebooked due to no available or full flights on given date. \n");
+        } 
+    }
+    
+}
