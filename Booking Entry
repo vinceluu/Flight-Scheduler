@@ -1,0 +1,59 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package flightscheduler.vvl5072.vincent.luu;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+
+/**
+ *
+ * @author Vince
+ */
+public class BookingEntry {
+
+    private static Connection connection = DatabaseConnection.databaseConnection();
+    private static PreparedStatement bookingStatement = null;
+    final static String BOOKING_QUERY = "INSERT into BOOKING values(?,?,?)";
+    final static String BOOKING_DELETE = "DELETE from booking WHERE customername = ? AND date = ? ";
+
+    public static void addBookingEntry(String name, String flightName, Date date) {
+        try {
+            //establish a connection to booking table
+            //adds in entered name flightname and date
+            bookingStatement = connection.prepareStatement(BOOKING_QUERY);
+            bookingStatement.setString(1, flightName);
+            bookingStatement.setDate(2, date);
+            bookingStatement.setString(3, name);
+            bookingStatement.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+
+    }
+    
+    public static int dropBooking(String name, Date date){
+         try {
+        //establish a connection to booking table
+        //removes based on selected customer name and date
+          bookingStatement = connection.prepareStatement(BOOKING_DELETE); 
+          bookingStatement.setString(1,name);
+          bookingStatement.setDate(2,date);
+          //recording number of times
+          int deleteCount = bookingStatement.executeUpdate();
+           return deleteCount;
+    } catch (SQLException ex) {
+       ex.printStackTrace();
+       return 0;
+       
+    }
+    }
+  
+}
