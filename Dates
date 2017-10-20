@@ -1,0 +1,64 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package flightscheduler.vvl5072.vincent.luu;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+/**
+ *
+ * @author Vince
+ */
+public class Dates {
+
+    private static PreparedStatement flightDates;
+    private static Connection connection;
+    final static String DATE_QUERY = "SELECT * FROM JAVA.DATELIST";
+    final static String ADD_DATE = "INSERT into Datelist values ?";
+
+    public static ArrayList<Date> getDates() {
+
+        //establshing connection to datelist containing flight dates
+        ArrayList<Date> dates = new ArrayList();
+        connection = DatabaseConnection.databaseConnection();
+
+        try {
+            flightDates = connection.prepareStatement(DATE_QUERY);
+            ResultSet resultSet = flightDates.executeQuery();
+
+            while (resultSet.next()) {
+                dates.add(resultSet.getDate(1));
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(Dates.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        //return the dates in table
+        return dates;
+
+    }
+
+    public static void addDate(Date date) {
+        connection = DatabaseConnection.databaseConnection();
+
+        try {
+            //insert into datelist table
+            flightDates = connection.prepareStatement(ADD_DATE);
+            flightDates.setDate(1, date);
+            flightDates.executeUpdate();
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+    }
+
+}
