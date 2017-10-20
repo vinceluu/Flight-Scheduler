@@ -1,0 +1,33 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package flightscheduler.vvl5072.vincent.luu;
+
+import java.sql.Date;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+
+/**
+ *
+ * @author Vince
+ */
+public class Waitlist {
+   //insert entry into waitlist table
+    public static void Waitlist(String name, String flightName, Date date) {     
+        WaitlistEntry.addIntoWaitlist(name, flightName, date);
+    }
+    
+    //get status of all waitlists
+      public static void WaitlistStatus( String flightName, Date date){
+       //convert sql date to string date
+        DateFormat dateFormat = new SimpleDateFormat("dd MMMM yyyy");
+        String dateText = dateFormat.format(date);
+         
+        //display the customers currently waitlisted
+        FlightScheduler.displayStatus(" Customers currently waitlisted for flight " + flightName + " on " + dateText + ":\n");
+        WaitlistEntry.getWaitlistedCustomers(flightName ,date);
+    
+    }
+}
