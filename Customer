@@ -1,1 +1,122 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package flightscheduler.vvl5072.vincent.luu;
+
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
+
+/**
+ *
+ * @author Vince
+ */
+public class Customer {
+
+    private static Connection connection = DatabaseConnection.databaseConnection();
+    private static PreparedStatement customerStatement = null;
+    final static String CUST_ADD_QUERY = "INSERT INTO BOOKING values(?)";
+    final static String CUST_NAME_BOOKING = "SELECT customername FROM JAVA.Booking";
+    final static String CUST_NAME_WAITLIST = "SELECT customername FROM JAVA.waitlistentry";
+    final static String FLIGHT_DATE_BOOKING = "SELECT flightname , date FROM JAVA.BOOKING WHERE customername = ?";
+    final static String FLIGHT_DATE_WL = "SELECT flightname , date FROM JAVA.waitlistentry WHERE customername = ?";
+
+    public void addCustomer(String name) {
+        try {
+            //name flight date
+            //insert customer into booking
+            customerStatement = connection.prepareStatement(CUST_ADD_QUERY);
+            customerStatement.setString(1, name);
+            customerStatement.executeUpdate();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public static Set<String> getCustomers() {
+        Set<String> customers = new HashSet();
+        //get customer name from booking
+        try {
+            customerStatement = connection.prepareStatement(CUST_NAME_BOOKING);
+            ResultSet resultSet = customerStatement.executeQuery();
+            while (resultSet.next()) {
+                customers.add(resultSet.getString(1));
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+        try {
+            //otherwise if not in booking then get customer name from wait list
+            customerStatement = connection.prepareStatement(CUST_NAME_WAITLIST);
+            ResultSet resultSet = customerStatement.executeQuery();
+            while (resultSet.next()) {
+                customers.add(resultSet.getString(1));
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+        return customers;
+    }
+
+    public static ArrayList<String> customerBookedStatus(String name) {
+        ArrayList<String> booked = new ArrayList<>();
+        connection = DatabaseConnection.databaseConnection();
+        try {
+            //get flight and date based on customer name
+            customerStatement = connection.prepareStatement(FLIGHT_DATE_BOOKING);
+            customerStatement.setString(1, name);
+            ResultSet resultSet = customerStatement.executeQuery();
+            while (resultSet.next()) {
+                booked.add(resultSet.getString(1));
+                booked.add(resultSet.getString(2));
+
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+        return booked;
+    }
+
+    public static ArrayList<String> customerWaitlistStatus(String name) {
+        ArrayList<String> waitlisted = new ArrayList<>();
+        connection = DatabaseConnection.databaseConnection();
+        try {
+            //get flight and date based on customer name from waitlist
+            customerStatement = connection.prepareStatement(FLIGHT_DATE_WL);
+            customerStatement.setString(1, name);
+            ResultSet resultSet = customerStatement.executeQuery();
+            while (resultSet.next()) {
+                waitlisted.add(resultSet.getString(1));
+                waitlisted.add(resultSet.getString(2));
+
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+
+        }
+        return waitlisted;
+    }
+
+    public static int dropCustomer(String name, Date date) {
+        //remove from waitlist and booking 
+        int dropBooking;
+        int dropWaitlist;
+        dropBooking = WaitlistEntry.dropWaitlist(name, date);
+        dropWaitlist = BookingEntry.dropBooking(name, date);
+        //keeps track of how many times removed to select correct case
+        return dropBooking - dropWaitlist;
+    }
+
+}
 
